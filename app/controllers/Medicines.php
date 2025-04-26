@@ -8,14 +8,38 @@ class Medicines extends Controller {
         $this->medicineModel = $this->model('Medicine');
         $this->categoryModel = $this->model('Category');
         $this->supplierModel = $this->model('Supplier');
+        
+        // Load helper classes
+        require_once APPROOT . '/app/helpers/Pagination.php';
     }
 
-    public function index() {
-        // Get all medicines
-        $medicines = $this->medicineModel->getMedicines();
+    public function index($page = 1) {
+        // Set items per page
+        $perPage = 30;
+        
+        // Get current page from URL parameter
+        $page = isset($page) && is_numeric($page) ? (int)$page : 1;
+        
+        // Get total number of medicines
+        $total = $this->medicineModel->getTotalMedicines();
+        
+        // Create pagination object
+        $pagination = new Pagination(
+            $page, 
+            $total, 
+            $perPage, 
+            URLROOT . '/medicines/index/{page}'
+        );
+        
+        // Get paginated medicines
+        $medicines = $this->medicineModel->getPaginatedMedicines(
+            $pagination->getCurrentPage(), 
+            $pagination->getLimit()
+        );
         
         $data = [
-            'medicines' => $medicines
+            'medicines' => $medicines,
+            'pagination' => $pagination
         ];
 
         $this->view('medicines/index', $data);

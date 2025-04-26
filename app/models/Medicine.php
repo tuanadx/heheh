@@ -17,6 +17,31 @@ class Medicine {
         return $this->db->resultSet();
     }
 
+    // Get paginated medicines with category and supplier names
+    public function getPaginatedMedicines($page = 1, $perPage = 30) {
+        $offset = ($page - 1) * $perPage;
+        
+        $this->db->query("SELECT m.*, c.name as category_name, s.name as supplier_name 
+                         FROM medicines m 
+                         JOIN categories c ON m.category_id = c.id 
+                         JOIN suppliers s ON m.supplier_id = s.id 
+                         ORDER BY m.name ASC
+                         LIMIT :limit OFFSET :offset");
+        
+        $this->db->bind(':limit', $perPage);
+        $this->db->bind(':offset', $offset);
+        
+        return $this->db->resultSet();
+    }
+
+    // Get total number of medicines
+    public function getTotalMedicines() {
+        $this->db->query("SELECT COUNT(*) as total FROM medicines");
+        
+        $result = $this->db->single();
+        return $result->total;
+    }
+
     // Get medicine by ID
     public function getMedicineById($id) {
         $this->db->query("SELECT * FROM medicines WHERE id = :id");
@@ -103,14 +128,6 @@ class Medicine {
             $this->db->execute();
             return false;
         }
-    }
-
-    // Get total number of medicines
-    public function getTotalMedicines() {
-        $this->db->query("SELECT COUNT(*) as total FROM medicines");
-        
-        $result = $this->db->single();
-        return $result->total;
     }
 
     // Get low stock medicines (quantity < 10)

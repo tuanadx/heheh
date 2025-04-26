@@ -56,6 +56,16 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Pagination -->
+            <?php echo $data['pagination']->render(); ?>
+            
+            <div class="text-center mt-3">
+                <p class="text-muted">
+                    Hiển thị <?php echo count($data['medicines']); ?> thuốc trên tổng số <?php echo $data['pagination']->getTotalItems(); ?> thuốc
+                    (Trang <?php echo $data['pagination']->getCurrentPage(); ?> / <?php echo $data['pagination']->getTotalPages(); ?>)
+                </p>
+            </div>
         <?php else : ?>
             <p>Không có thuốc nào trong hệ thống.</p>
         <?php endif; ?>
@@ -64,19 +74,14 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize DataTable
+        // Initialize DataTable - removed pagination since we're using our own
         $('#medicinesTable').DataTable({
             responsive: true,
+            paging: false, // Disable DataTable pagination
             language: {
                 search: "Tìm kiếm:",
                 info: "Hiển thị _START_ đến _END_ của _TOTAL_ mục",
-                lengthMenu: "Hiển thị _MENU_ mục",
-                paginate: {
-                    first: "Đầu",
-                    last: "Cuối",
-                    next: "Tiếp",
-                    previous: "Trước"
-                },
+                infoEmpty: "Hiển thị 0 đến 0 của 0 mục",
                 emptyTable: "Không có dữ liệu",
                 zeroRecords: "Không tìm thấy kết quả phù hợp"
             }
