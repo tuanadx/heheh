@@ -2,6 +2,7 @@
 // Script cập nhật dữ liệu từ edit_product.json vào cơ sở dữ liệu
 require_once 'config/config.php';
 require_once 'core/Database.php';
+require_once 'core/APCuCache.php';
 
 // Biến lưu trạng thái xử lý
 $processed = false;
@@ -10,6 +11,13 @@ $endTime = 0;
 $successCount = 0;
 $errorCount = 0;
 $errors = [];
+$cacheHit = false;
+
+// Xử lý khi người dùng muốn xóa cache
+if (isset($_POST['clear_cache'])) {
+    APCuCache::clear();
+    $cacheCleared = true;
+}
 
 // Xử lý khi form được gửi đi
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
@@ -33,6 +41,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
             $db->query("START TRANSACTION");
             $db->execute();
             
+            // Sử dụng APCuCache để lấy mapping sản phẩm
+            $cacheKey = 'product_id_map';
+            $productMap = APCuCache::get($cacheKey);
+            
+            if ($productMap !== null) {
+                // Cache hit - sử dụng dữ liệu từ cache
+                $cacheHit = true;
+            } else {
+                // Cache miss - lấy dữ liệu từ database
+                $productMap = [];
+                
+                // Lấy tất cả sản phẩm từ cơ sở dữ liệu một lần duy nhất
+                $db->query("SELECT id, name FROM medicines");
+                $allProducts = $db->resultSet();
+                
+                // Tạo mapping tên sản phẩm -> ID, chuẩn hóa tên để dễ tìm kiếm
+                foreach ($allProducts as $product) {
+                    // Chuẩn hóa tên sản phẩm để làm khóa (bỏ khoảng trắng, chữ thường)
+                    $normalizedName = trim(strtolower($product->name));
+                    $productMap[$normalizedName] = $product->id;
+                }
+                
+                // Lưu vào cache với thời gian 1 giờ
+                APCuCache::set($cacheKey, $productMap, 3600);
+            }
+            
             // Xử lý từng sản phẩm
             foreach ($products as $product) {
                 // Kiểm tra tên sản phẩm
@@ -41,34 +75,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
                     continue;
                 }
                 
-                // Tìm sản phẩm trong cơ sở dữ liệu
-                $db->query("SELECT id FROM medicines WHERE name = :name");
-                $db->bind(':name', $product['name']);
-                $existingProduct = $db->single();
+                // Chuẩn hóa tên sản phẩm từ file JSON để tìm kiếm
+                $searchName = trim(strtolower($product['name']));
                 
-                if (!$existingProduct) {
+                // Tìm sản phẩm bằng tên đã chuẩn hóa
+                if (isset($productMap[$searchName])) {
+                    $productId = $productMap[$searchName];
+                    
+                    // Tiến hành update với ID đã biết
+                    $db->query("UPDATE medicines SET 
+                               price = :price,
+                               quantity = :quantity,
+                               expiry_date = :expiry_date
+                               WHERE id = :id");
+                    
+                    $db->bind(':price', $product['price']);
+                    $db->bind(':quantity', $product['quantity']);
+                    $db->bind(':expiry_date', $product['expiry_date']);
+                    $db->bind(':id', $productId);
+                    
+                    if ($db->execute()) {
+                        $successCount++;
+                    } else {
+                        $errorCount++;
+                        $errors[] = "Lỗi khi cập nhật: " . $product['name'];
+                    }
+                } else {
                     $errors[] = "Không tìm thấy sản phẩm: " . $product['name'];
                     $errorCount++;
-                    continue;
-                }
-                
-                // Cập nhật thông tin sản phẩm (loại bỏ updated_at)
-                $db->query("UPDATE medicines SET 
-                           price = :price,
-                           quantity = :quantity,
-                           expiry_date = :expiry_date
-                           WHERE id = :id");
-                
-                $db->bind(':price', $product['price']);
-                $db->bind(':quantity', $product['quantity']);
-                $db->bind(':expiry_date', $product['expiry_date']);
-                $db->bind(':id', $existingProduct->id);
-                
-                if ($db->execute()) {
-                    $successCount++;
-                } else {
-                    $errorCount++;
-                    $errors[] = "Lỗi khi cập nhật: " . $product['name'];
                 }
             }
             
@@ -123,13 +157,20 @@ if (file_exists('data/edit_product.json')) {
                         <h1 class="h4 mb-0">Cập Nhật Sản Phẩm Từ edit_product.json</h1>
                     </div>
                     <div class="card-body">
+                        <?php   if (isset($cacheCleared)): ?>
+                            <div class="alert alert-info mb-4">
+                                <p class="mb-0">Đã xóa cache thành công!</p>
+                            </div>
+                        <?php endif; ?>
+                        
                         <?php if ($processed): ?>
                             <?php if (empty($errors)): ?>
                                 <div class="alert alert-success mb-4">
                                     <h5 class="alert-heading">Cập nhật thành công!</h5>
                                     <p>Đã cập nhật <strong><?php echo $successCount; ?></strong> sản phẩm vào cơ sở dữ liệu.</p>
                                     <hr>
-                                    <p class="mb-0">Thời gian thực hiện: <strong><?php echo number_format($endTime - $startTime, 4); ?> giây</strong></p>
+                                    <p>Thời gian thực hiện: <strong><?php echo number_format($endTime - $startTime, 4); ?> giây</strong></p>
+                                    <p class="mb-0">Cache: <strong><?php echo $cacheHit ? 'Hit (sử dụng dữ liệu từ cache)' : 'Miss (tải từ cơ sở dữ liệu)'; ?></strong></p>
                                 </div>
                             <?php else: ?>
                                 <div class="alert alert-warning mb-4">
@@ -137,6 +178,7 @@ if (file_exists('data/edit_product.json')) {
                                     <p>Đã cập nhật <strong><?php echo $successCount; ?></strong> sản phẩm. Có <strong><?php echo $errorCount; ?></strong> lỗi.</p>
                                     <hr>
                                     <p>Thời gian thực hiện: <strong><?php echo number_format($endTime - $startTime, 4); ?> giây</strong></p>
+                                    <p>Cache: <strong><?php echo $cacheHit ? 'Hit (sử dụng dữ liệu từ cache)' : 'Miss (tải từ cơ sở dữ liệu)'; ?></strong></p>
                                     
                                     <div class="mt-3">
                                         <p class="mb-2 fw-bold">Chi tiết lỗi:</p>
@@ -148,6 +190,16 @@ if (file_exists('data/edit_product.json')) {
                                     </div>
                                 </div>
                             <?php endif; ?>
+                        <?php endif; ?>
+                        
+                        <?php if (extension_loaded('apcu')): ?>
+                            <div class="mb-3">
+                                <form method="post" action="">
+                                    <button type="submit" name="clear_cache" class="btn btn-warning mb-3">
+                                        <i class="bi bi-trash"></i> Xóa cache
+                                    </button>
+                                </form>
+                            </div>
                         <?php endif; ?>
                         
                         <?php if ($fileExists): ?>
@@ -253,4 +305,4 @@ if (file_exists('data/edit_product.json')) {
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html> 
+</html>

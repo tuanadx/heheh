@@ -68,7 +68,7 @@ $productCount = count($products);
             <div class="col-md-8">
                 <div class="card shadow">
                     <div class="card-header bg-success text-white">
-                        <h1 class="h4 mb-0">Tạo File edit_product.json</h1>
+                        <h1 class="h4 mb-0">Tạo File edit_product.json (5000 sản phẩm)</h1>
                     </div>
                     <div class="card-body">
                         <div class="alert alert-success mb-4">

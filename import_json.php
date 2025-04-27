@@ -139,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         <?php endif; ?>
                         
-                        <p>Công cụ này sẽ nhập 1000 sản phẩm thuốc từ file <code>product.json</code> vào cơ sở dữ liệu.</p>
+                        <p>Công cụ này sẽ nhập 5000 sản phẩm thuốc từ file <code>product.json</code> vào cơ sở dữ liệu.</p>
                         
                         <?php if (file_exists('product.json')): ?>
                             <div class="alert alert-info">

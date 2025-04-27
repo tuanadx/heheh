@@ -1,5 +1,5 @@
 <?php
-// Tệp tạo dữ liệu JSON cho 1000 sản phẩm thuốc
+// Tệp tạo dữ liệu JSON cho 5000 sản phẩm thuốc
 
 // Kết nối đến cơ sở dữ liệu để lấy các category_id và supplier_id
 require_once 'config/config.php';
@@ -95,11 +95,11 @@ $descriptions = [
     "Thuốc điều trị các bệnh về da"
 ];
 
-// Tạo mảng để lưu trữ 1000 sản phẩm thuốc
+// Tạo mảng để lưu trữ 5000 sản phẩm thuốc
 $products = [];
 
-// Tạo 1000 sản phẩm thuốc với thông tin ngẫu nhiên
-for ($i = 1; $i <= 1000; $i++) {
+// Tạo 5000 sản phẩm thuốc với thông tin ngẫu nhiên
+for ($i = 1; $i <= 5000; $i++) {
     // Lấy ngẫu nhiên category_id và supplier_id
     $category_id = $category_ids[array_rand($category_ids)];
     $supplier_id = $supplier_ids[array_rand($supplier_ids)];
@@ -162,7 +162,7 @@ $json_data = json_encode($products, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 file_put_contents('product.json', $json_data);
 
 // Hiển thị thông báo
-echo "Đã tạo thành công file product.json với 1000 sản phẩm thuốc!";
+echo "Đã tạo thành công file product.json với 5000 sản phẩm thuốc!";
 echo "<br>Kích thước file: " . round(filesize('product.json') / 1024, 2) . " KB";
 echo "<br><a href='product.json' download>Tải xuống file product.json</a>";
 
