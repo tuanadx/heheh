@@ -8,8 +8,23 @@
 </div>
 
 <div class="card shadow mb-4">
-    <div class="card-header py-3">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
         <h6 class="m-0 font-weight-bold text-primary">Quản Lý Thuốc</h6>
+        <div>
+            <a href="http://localhost/mvc/create_json.php" class="btn btn-sm btn-primary">
+                <i class="bi bi-file-earmark-plus"></i> Tạo product.json
+            </a>
+            <a href="http://localhost/mvc/import_json.php" class="btn btn-sm btn-warning">
+            <i class="bi bi-file-earmark-arrow-up"></i> Nhập JSON
+
+            </a>
+            <a href="http://localhost/mvc/create_edit_product_json.php" class="btn btn-sm btn-info">
+                <i class="bi bi-file-earmark-arrow-down"></i> Tạo JSON
+            </a>
+            <a href="http://localhost/mvc/update_from_json.php" class="btn btn-sm btn-success">
+                <i class="bi bi-arrow-repeat"></i> Cập nhật từ JSON
+            </a>
+        </div>
     </div>
     <div class="card-body">
         <?php if(count($data['medicines']) > 0) : ?>
